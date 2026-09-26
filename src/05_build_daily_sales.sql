@@ -1,5 +1,4 @@
 -- Databricks notebook source
-
 CREATE OR REPLACE TABLE workspace.sales_lab.gold_daily_sales AS
 
 SELECT
@@ -25,7 +24,7 @@ GROUP BY
   c.country;
 
 
-  -- COMMAND ----------
+-- COMMAND ----------
 
 SELECT *
 FROM workspace.sales_lab.gold_daily_sales

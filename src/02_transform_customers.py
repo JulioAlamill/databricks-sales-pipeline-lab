@@ -1,3 +1,4 @@
+# Databricks notebook source
 from delta.tables import DeltaTable
 from pyspark.sql import Window
 from pyspark.sql import functions as F
