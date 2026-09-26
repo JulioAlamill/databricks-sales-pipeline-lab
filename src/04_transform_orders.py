@@ -25,8 +25,8 @@ silver_source = (
         F.upper(F.trim("order_id")).alias("order_id"),
         F.upper(F.trim("customer_id")).alias("customer_id"),
         F.try_to_timestamp(
-            "order_timestamp",
-            "yyyy-MM-dd HH:mm:ss",
+            F.col("order_timestamp"),
+            F.lit("yyyy-MM-dd HH:mm:ss"),
         ).alias("order_timestamp"),
         F.trim("product_category").alias("product_category"),
         F.col("quantity").cast("int").alias("quantity"),
@@ -43,7 +43,6 @@ silver_source = (
     .withColumn("order_amount", F.round(F.col("quantity") * F.col("unit_price"), 2))
 )
 
-# One current version of each order_id.
 dedupe_window = (
     Window
     .partitionBy("order_id")

@@ -18,7 +18,6 @@ schema = args.schema
 bronze_table = f"{catalog}.{schema}.bronze_customers_raw"
 silver_table = f"{catalog}.{schema}.silver_customers"
 
-
 bronze = spark.table(bronze_table)
 
 silver_source = (
@@ -28,7 +27,10 @@ silver_source = (
         F.lower(F.trim("email")).alias("email"),
         F.upper(F.trim("segment")).alias("segment"),
         F.upper(F.trim("country")).alias("country"),
-        F.try_to_date("signup_date", "yyyy-MM-dd").alias("signup_date"),
+        F.try_to_date(
+            F.col("signup_date"),
+            F.lit("yyyy-MM-dd"),
+        ).alias("signup_date"),
         F.lower(F.trim("status")).alias("status"),
         F.col("_ingested_at"),
     )
@@ -36,8 +38,6 @@ silver_source = (
     .where(F.col("customer_name").isNotNull() & (F.length("customer_name") > 0))
 )
 
-
-# If a customer arrives more than once, retain the latest ingested record.
 dedupe_window = (
     Window
     .partitionBy("customer_id")
@@ -51,8 +51,6 @@ silver_source = (
     .drop("_row_number")
 )
 
-
-# First run creates the table. Later runs upsert by customer_id.
 if not spark.catalog.tableExists(silver_table):
     (
         silver_source.write
