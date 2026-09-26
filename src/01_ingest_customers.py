@@ -1,21 +1,31 @@
-# Databricks notebook source
+import argparse
+
 from pyspark.sql import functions as F
 
-# Job parameters
-dbutils.widgets.text("catalog", "workspace")
-dbutils.widgets.text("schema", "sales_lab")
-dbutils.widgets.text(
-    "source_path",
-    "/Volumes/workspace/sales_lab/landing_sales/customers"
+
+# Python script task parameters.
+# Defaults let you also run the script without supplying job parameters.
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--catalog", default="workspace")
+parser.add_argument("--schema", default="sales_lab")
+parser.add_argument(
+    "--source-path",
+    default="/Volumes/workspace/sales_lab/landing_sales/customers",
 )
 
-catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
-source_path = dbutils.widgets.get("source_path")
+args, _ = parser.parse_known_args()
+
+catalog = args.catalog
+schema = args.schema
+source_path = args.source_path
 
 bronze_table = f"{catalog}.{schema}.bronze_customers_raw"
 
-# Read all customer CSV files from the landing folder.
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema}")
+
+
+# Read every CSV currently present in the customers landing folder.
 raw_customers = (
     spark.read
     .option("header", True)
@@ -23,7 +33,6 @@ raw_customers = (
     .csv(source_path)
 )
 
-# Fail early if a source file does not have the expected structure.
 required_columns = {
     "customer_id",
     "customer_name",
@@ -41,14 +50,17 @@ if missing_columns:
         f"Customer source file is missing columns: {sorted(missing_columns)}"
     )
 
-# Bronze preserves source values and adds ingestion metadata.
+
+# Preserve supplied values and add ingestion metadata.
 bronze_with_metadata = (
     raw_customers
     .withColumn("_ingested_at", F.current_timestamp())
     .withColumn("_source_file", F.col("_metadata.file_path"))
 )
 
-# Skip source files that Bronze has already ingested.
+
+# File-once ingestion:
+# exclude rows belonging to source files that Bronze has already processed.
 if spark.catalog.tableExists(bronze_table):
     already_processed = (
         spark.table(bronze_table)
@@ -63,6 +75,7 @@ if spark.catalog.tableExists(bronze_table):
     )
 else:
     new_bronze = bronze_with_metadata
+
 
 new_count = new_bronze.count()
 
