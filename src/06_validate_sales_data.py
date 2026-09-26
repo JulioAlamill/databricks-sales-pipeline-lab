@@ -1,11 +1,17 @@
-# Databricks notebook source
+import argparse
+
 from pyspark.sql import functions as F
 
-dbutils.widgets.text("catalog", "workspace")
-dbutils.widgets.text("schema", "sales_lab")
 
-catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--catalog", default="workspace")
+parser.add_argument("--schema", default="sales_lab")
+
+args, _ = parser.parse_known_args()
+
+catalog = args.catalog
+schema = args.schema
 
 customers_table = f"{catalog}.{schema}.silver_customers"
 orders_table = f"{catalog}.{schema}.silver_orders"
@@ -22,8 +28,7 @@ duplicate_order_count = (
 )
 
 invalid_order_count = (
-    orders
-    .where(
+    orders.where(
         F.col("order_id").isNull()
         | F.col("customer_id").isNull()
         | (F.col("quantity") <= 0)
@@ -34,8 +39,7 @@ invalid_order_count = (
 )
 
 orphan_order_count = (
-    orders
-    .select("customer_id")
+    orders.select("customer_id")
     .join(
         customers.select("customer_id"),
         on="customer_id",
@@ -45,15 +49,15 @@ orphan_order_count = (
 )
 
 assert duplicate_order_count == 0, (
-    f"Found {duplicate_order_count} duplicate order IDs."
+    f"Silver orders has {duplicate_order_count} duplicate order IDs"
 )
 
 assert invalid_order_count == 0, (
-    f"Found {invalid_order_count} invalid orders."
+    f"Silver orders has {invalid_order_count} invalid records"
 )
 
 assert orphan_order_count == 0, (
-    f"Found {orphan_order_count} orders without a matching customer."
+    f"Silver orders has {orphan_order_count} orders without a customer"
 )
 
 print(

@@ -1,18 +1,26 @@
-# Databricks notebook source
+import argparse
+
 from pyspark.sql import functions as F
 
-dbutils.widgets.text("catalog", "workspace")
-dbutils.widgets.text("schema", "sales_lab")
-dbutils.widgets.text(
-    "source_path",
-    "/Volumes/workspace/sales_lab/landing_sales/orders"
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--catalog", default="workspace")
+parser.add_argument("--schema", default="sales_lab")
+parser.add_argument(
+    "--source-path",
+    default="/Volumes/workspace/sales_lab/landing_sales/orders",
 )
 
-catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
-source_path = dbutils.widgets.get("source_path")
+args, _ = parser.parse_known_args()
+
+catalog = args.catalog
+schema = args.schema
+source_path = args.source_path
 
 bronze_table = f"{catalog}.{schema}.bronze_orders_raw"
+
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema}")
 
 raw_orders = (
     spark.read
