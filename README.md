@@ -51,12 +51,12 @@ Both Bronze ingestion tasks:
 - read CSV files recursively from Unity Catalog Volumes;
 - validate required source columns;
 - add `_ingested_at` and `_source_file`;
-- use a left-anti join on `_source_file` to skip files already ingested;
+- skip source files already ingested;
 - append only new files to Delta tables.
 
 ### Silver
 
-Silver cleans, types, deduplicates, and upserts the business-ready records.
+Silver cleans, types, deduplicates, and upserts business-ready records.
 
 | Table | Purpose |
 |---|---|
@@ -70,7 +70,7 @@ Transformations include:
 - casting quantity and monetary fields to appropriate types;
 - calculating `order_date` and `order_amount`;
 - retaining the latest ingested record for each business key;
-- Delta `MERGE` operations for idempotent updates and inserts.
+- Delta `MERGE` operations to update existing keys and insert new ones.
 
 ### Gold
 
@@ -100,7 +100,7 @@ ingest_customers → transform_customers ─┐
 ingest_orders    → transform_orders ────┘
 ```
 
-The two ingestion/transformation branches can run in parallel. Validation runs only after both Silver tables are ready. The SQL Gold task runs only when validation succeeds.
+The two ingestion and transformation branches run independently. Validation runs only after both Silver tables are ready. The SQL Gold task runs only when validation succeeds.
 
 ## Data-quality validation
 
@@ -124,7 +124,8 @@ src/
 
 docs/
 └── screenshots/
-    └── sales_pipeline_dag_success.png
+    ├── sales_pipeline_dag_success.png
+    └── gold_daily_sales_output.png
 ```
 
 ## Running the pipeline
@@ -132,7 +133,7 @@ docs/
 1. Upload customer CSV files to the `customers` landing folder.
 2. Upload order CSV files to the `orders` landing folder.
 3. Run the `sales_pipeline_daily` Databricks Workflow.
-4. Review the five Delta tables in Catalog Explorer.
+4. Review the Delta tables in Catalog Explorer.
 5. Query the Gold table:
 
 ```sql
@@ -143,21 +144,30 @@ ORDER BY order_date, segment, country;
 
 ## Evidence
 
-The workflow completed successfully on Databricks Serverless with both source branches, validation, and the SQL Gold task:
+### Successful workflow DAG
+
+The workflow completed successfully on Databricks Serverless with two source branches, validation, and a SQL Gold task.
 
 ![Successful Databricks sales pipeline workflow](docs/screenshots/sales_pipeline_dag_success.png)
+
+### Gold output
+
+The final SQL task produces daily sales metrics after customer and order data have passed validation.
+
+![Gold daily sales output](docs/screenshots/gold_daily_sales_output.png)
 
 ## What this project demonstrates
 
 - Unity Catalog schemas, Volumes, and managed Delta tables;
-- medallion architecture across two independent source feeds;
+- a multi-source medallion architecture;
 - PySpark ingestion and transformation;
 - SQL-based Gold reporting;
 - file-once Bronze ingestion;
 - Delta `MERGE` upsert patterns;
 - data-quality gates;
 - a multi-task Databricks Workflow DAG;
-- Git-backed Databricks development and repair runs.
+- Git-backed Databricks development;
+- failure diagnosis and repair runs.
 
 ## Notes
 
