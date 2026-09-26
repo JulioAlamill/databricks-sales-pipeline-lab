@@ -23,3 +23,10 @@ GROUP BY
   o.order_date,
   c.segment,
   c.country;
+
+
+  -- COMMAND ----------
+
+SELECT *
+FROM workspace.sales_lab.gold_daily_sales
+ORDER BY order_date, segment, country;
